@@ -1,0 +1,40 @@
+version: '3.1'
+
+services:
+
+  db:
+    image: mysql:5.7
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: MyCoolPassword1!
+    volumes:
+      # - ./dbdata:/var/lib/mysql
+      - ./setup:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost" , "-u" , "root" , "-pMyCoolPassword1!"]
+      interval: 5s
+      timeout: 10s
+      retries: 15
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+
+  web:
+    build: 
+      context: .
+      dockerfile: ./docker/php-apache.dockerfile
+    ports:
+      - 8000:80
+    volumes:
+      - ./pages:/var/www/html
+    depends_on:
+    # - db
+      db:
+        condition: service_healthy
+
+volumes:
+  dbdata:
