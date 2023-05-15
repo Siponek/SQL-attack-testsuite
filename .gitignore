@@ -1,3 +1,4 @@
 .vscode
 wololo.txt
 venv-sql
+**/**.pyc
