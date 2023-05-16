@@ -31,9 +31,13 @@ install_reqs: venv
 test:
 	$(PYTEST) -v
 
+.PHONY: build
+build:
+	docker-compose build
+
 .PHONY: up
 up:
-	docker-compose up -d
+	docker-compose up
 
 .PHONY: down
 down:
