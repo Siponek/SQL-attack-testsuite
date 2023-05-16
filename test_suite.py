@@ -4,6 +4,7 @@ import pytest
 import requests
 from bs4 import BeautifulSoup
 from pathlib import Path
+import pyyaml
 
 
 list_of_files = list(Path("./pages").rglob("*.php"))
@@ -19,14 +20,21 @@ payloads = [
     "' UNION SELECT 1, VERSION() -- ",
     "' UNION SELECT 1, USER() -- ",
     "' UNION SELECT NULL, NULL, name, price FROM items; --",
+    "' UNION SELECT NULL,@@version, NULL, NULL; --",
+    "' UNION SELECT @@version, NULL, NULL; --",
+    "' UNION SELECT @@version, NULL; --",
+    "' UNION SELECT @@version; --",
 ]
 
-# Expected values in response for corresponding payloads
+# 'UNION SELECT @@version, NULL
+# 'UNION%20SELECT%20%40%40version%2C%20NULL
+# %' UNION SELECT 1,version(),3,4 -- -
+# %' UNION SELECT 1,version()-- -
 expected_values = [
     # Assuming MySQL version is 5.7.32
     "5.7.42",
     # Assuming MySQL user is root@localhost
-    "root@localhost",
+    "root@",
     # ... you can add more expected values here ...
 ]
 
@@ -48,25 +56,6 @@ QUERY_PARAMS: dict = {
         "type": "search",
     },
 }
-
-
-# def get_substring_in_keys(dictionary: dict, url: str) -> list:
-#     """Find a substring in keys of an dictionary and return the first occurence.
-#     WARNING: This function returns the first occurence so it depends on order of files.
-
-#     Args:
-#         dictionary (dict): Dictionary to search in.
-#         url (str): String to search for.
-
-#     Returns:
-#         dict: Return dictionary with matching keys.
-#     """
-#     tmp_dict: dict = {
-#         key: dictionary.get(key) for key in dictionary if key in url
-#     }
-#     # python 3.7 python dicts are ordered by default
-#     first_key: str = next(iter(tmp_dict))
-#     return tmp_dict.get(first_key)
 
 
 def get_query_type(dictionary: dict, url: str) -> list:
