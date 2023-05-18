@@ -42,3 +42,6 @@ up:
 .PHONY: down
 down:
 	docker-compose down
+
+.PHONY: run-all
+run-all: install_reqs build up test down
