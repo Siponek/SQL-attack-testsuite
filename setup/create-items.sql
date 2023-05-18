@@ -1,3 +1,4 @@
+USE fstt23_assignment;
 CREATE TABLE IF NOT EXISTS items (
     name VARCHAR(100),
     price INT
