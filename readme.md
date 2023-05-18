@@ -82,5 +82,5 @@ make clean
 
 If you wish to contribute to this project, please fork the repository and submit a pull request.
 
-<!-- ## License
-This project uses the following license: [Insert License Here]. -->
+## License
+This project uses the following license: MPL-2.0 license.
